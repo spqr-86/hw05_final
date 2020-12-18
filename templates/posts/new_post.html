@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load user_filters %}
+{% block title %}
+    {% if post %}Редактировать запись{% else %}Новая запись{% endif %}
+{% endblock %}
+{% block header %}
+    {% if post %}Редактировать запись{% else %}Добавить запись{% endif %}
+{% endblock %}
+{% block content %}
+    {% for error in form.errors %}
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
+    {% endfor %}
+    <form method="post" enctype="multipart/form-data" action=
+        {% if post %}
+            "{% url 'post_edit' post.author post.id %}"
+        {% else %}
+            "{% url 'new_post' %}"
+        {% endif %}
+        >
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="form-group">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field|addclass:"form-control" }}
+                {% if field.help_text %}
+                    <small id="{{ field.id_for_label }}-help" class="form-text text-muted">
+                        {{ field.help_text|safe }}
+                    </small>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <input type="submit" value={% if post %}"Сохранить"{% else %}"Добавить"{% endif %}>
+    </form>
+{% endblock %}

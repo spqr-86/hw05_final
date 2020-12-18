@@ -4,6 +4,7 @@ venv/
 .venv
 .venv/
 
+
 __pycache__/
 *.py[cod]
 
@@ -18,5 +19,8 @@ __pycache__/
 static/
 posts/static/
 media/
+data/
+context_processors/
+sent_emails/
 
 db.sqlite3
