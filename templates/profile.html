@@ -21,8 +21,8 @@
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item">
                         <div class="h6 text-muted">
-                            Подписчиков: XXX <br />
-                            Подписан: XXX
+                            Подписчиков: {{ author.following.count }} <br />
+                            Подписан: {{ author.follower.count }}
                         </div>
                     </li>
                     <li class="list-group-item">
@@ -31,6 +31,21 @@
                             Записей:{{ author.posts.count }}
                         </div>
                     </li>
+                    {% if user != author %}
+                        <li class="list-group-item">
+                            {% if following %}
+                                <a class="btn btn-lg btn-light"
+                                    href="{% url 'profile_unfollow' author.username %}" role="button">
+                                    Отписаться
+                                </a>
+                            {% else %}
+                                <a class="btn btn-lg btn-primary"
+                                    href="{% url 'profile_follow' author.username %}" role="button">
+                                    Подписаться
+                                </a>
+                            {% endif %}
+                        </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>
@@ -39,7 +54,7 @@
                 {% include "post_item.html" with post=post %}
             {% endfor %}
             {% if page.has_other_pages %}
-                {% include "paginator.html" with items=page paginator=paginator%}
+                {% include "paginator.html" with items=page paginator=paginator %}
             {% endif %}
         </div>
     </div>

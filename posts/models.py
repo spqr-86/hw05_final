@@ -72,7 +72,6 @@ class Comment(models.Model):
         verbose_name='Автор',
         related_name='comments'
     )
-
     text = models.TextField(
         verbose_name='Текст',
         help_text='Напишите что-нибудь'
@@ -90,3 +89,20 @@ class Comment(models.Model):
         verbose_name = "Комментарий"
         verbose_name_plural = "Комментарии"
         ordering = ('-created', )
+
+
+class Follow(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Пользовватель',
+        related_name='follower',
+
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Автор',
+        related_name='following',
+
+    )

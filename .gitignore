@@ -20,7 +20,6 @@ static/
 posts/static/
 media/
 data/
-context_processors/
 sent_emails/
 
 db.sqlite3

@@ -3,12 +3,13 @@ import tempfile
 
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
 from django import forms
 
 from posts.forms import PostForm
-from posts.models import Post, Group, User
+from posts.models import Post, Group, User, Comment
 
 INDEX_URL = reverse('index')
 NEW_POST_URL = reverse('new_post')
@@ -52,7 +53,7 @@ class PostCreateFormTests(TestCase):
         self.uploaded = SimpleUploadedFile(
             name='small.gif',
             content=self.small_gif,
-            content_type='image/gif'
+            content_type='image/gif',
         )
         self.post = Post.objects.create(
             text='Пост1',
@@ -69,19 +70,32 @@ class PostCreateFormTests(TestCase):
             self.post.id,
         ])
         self.LOGIN_URL_NEXT_POST_EDIT = (
-                reverse('login') + f'?next={self.POST_EDIT_URL}'
+            reverse('login') + f'?next={self.POST_EDIT_URL}'
         )
         self.LOGIN_URL_NEXT_NEW_POST = (
-                reverse('login') + f'?next={NEW_POST_URL}'
+            reverse('login') + f'?next={NEW_POST_URL}'
+        )
+        self.ADD_COMMENT_URL = reverse('add_comment', args=[
+            self.user.username,
+            self.post.id,
+        ])
+        self.LOGIN_URL_NEXT_ADD_COMMENT = (
+            reverse('login') + f'?next={self.ADD_COMMENT_URL}'
         )
 
     def test_create_new_post(self):
         """Валидная форма создает Post."""
         Post.objects.all().delete()
         post_count = Post.objects.count()
+        uploaded = SimpleUploadedFile(
+            name='small.gif',
+            content=self.small_gif,
+            content_type='image/gif',
+        )
         form_data = {
             'text': 'Новый пост',
             'group': self.group.id,
+            'image': uploaded,
         }
         response = self.authorized_client.post(
             NEW_POST_URL,
@@ -94,6 +108,7 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(post.text, form_data['text'])
         self.assertEqual(post.group, self.group)
         self.assertEqual(post.author, self.user)
+        self.assertEqual(bool(post.image), True)
 
     def test_edit_post(self):
         """Валидная форма редактирует Post."""
@@ -171,3 +186,53 @@ class PostCreateFormTests(TestCase):
             with self.subTest(value=value):
                 form_field = response.context.get('form').fields.get(value)
                 self.assertIsInstance(form_field, expected)
+
+    def test_add_comment(self):
+        """Авторизированный пользователь может комментировать пост"""
+        new_user = User.objects.create_user(username='new_user')
+        new_authorized_client = Client()
+        new_authorized_client.force_login(new_user)
+        Comment.objects.all().delete()
+        comment_count = Comment.objects.count()
+        form_data = {
+            'post': self.post,
+            'text': 'Тестовый комментарий',
+        }
+        response = new_authorized_client.post(
+            self.ADD_COMMENT_URL,
+            data=form_data,
+            follow=True,
+        )
+        comment = self.post.comments.all()[0]
+        self.assertRedirects(response, self.POST_URL)
+        self.assertEqual(Comment.objects.count(), comment_count + 1)
+        self.assertEqual(comment.text, form_data['text'])
+        self.assertEqual(comment.post, form_data['post'])
+
+    def test_anonymous_add_post(self):
+        """Анонимный пользавотель не может комментировать пост"""
+        comment_count = Comment.objects.count()
+        form_data = {
+            'post': self.post,
+            'text': 'Тестовый комментарий',
+        }
+        response = self.guest_client.post(
+            self.ADD_COMMENT_URL,
+            data=form_data,
+            follow=True,
+        )
+        self.assertRedirects(
+            response, self.LOGIN_URL_NEXT_ADD_COMMENT
+        )
+        self.assertEqual(Comment.objects.count(), comment_count)
+
+    def test_index_cache(self):
+        """проверка работы кэша """
+        response = self.authorized_client.get(INDEX_URL)
+        post = response.context['page'][0]
+        response = self.authorized_client.get(INDEX_URL)
+        Post.objects.all().delete()
+        self.assertIn(post, response.context['page'])
+        cache.clear()
+        response = self.authorized_client.get(INDEX_URL)
+        self.assertNotIn(post, response.context['page'])

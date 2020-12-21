@@ -1,12 +1,18 @@
+import shutil
+import tempfile
+
+from django.conf import settings
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 
-from posts.models import Post, Group, User
+from posts.models import Post, Group, User, Follow
 
 INDEX_URL = reverse('index')
 INDEX_PAGE2_URL = INDEX_URL + '?page=2'
 NEW_POST_URL = reverse('new_post')
 NAME = 'test_user'
+NAME2 = 'user2'
 SLUG = 'test-slug'
 SLUG2 = 'test-slug2'
 GROUP_URL = reverse('group', kwargs={'slug': SLUG})
@@ -27,11 +33,30 @@ class PostPagesTests(TestCase):
             title='Тестовый заголовок',
             slug=SLUG2,
             description='Текст')
+        small_gif = (
+            b'\x47\x49\x46\x38\x39\x61\x02\x00'
+            b'\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+            b'\x0A\x00\x3B'
+        )
+        uploaded = SimpleUploadedFile(
+            name='small.gif',
+            content=small_gif,
+            content_type='image/gif',
+        )
         cls.post = Post.objects.create(
             author=cls.user,
             text='Текст',
             group=cls.group,
+            image=uploaded,
         )
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(settings.MEDIA_ROOT, ignore_errors=True)
+        super().tearDownClass()
 
     def setUp(self):
         self.authorized_client = Client()
@@ -75,7 +100,7 @@ class PaginatorViewsTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        user = User.objects.create_user(username='test_user')
+        user = User.objects.create_user(username=NAME)
         Post.objects.bulk_create(
             list(map(lambda x: Post(author=user, text='Text'), range(13)))
         )
@@ -90,3 +115,49 @@ class PaginatorViewsTest(TestCase):
     def test_second_page_containse_three_records(self):
         response = self.client.get(INDEX_PAGE2_URL)
         self.assertEqual(len(response.context['page']), 3)
+
+
+class FollowViewsTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = User.objects.create_user(username=NAME)
+        cls.user2 = User.objects.create_user(username=NAME2)
+
+    def setUp(self):
+        self.authorized_client = Client()
+        self.authorized_client2 = Client()
+        self.authorized_client.force_login(self.user)
+        self.authorized_client2.force_login(self.user2)
+        self.FOLLOW_URL = reverse(
+            'profile_follow', kwargs={'username': NAME2}
+        )
+        self.UNFOLLOW_URL = reverse(
+            'profile_unfollow', kwargs={'username': NAME2}
+        )
+        self.FOLLOW_INDEX_URL = reverse('follow_index')
+
+    def test_user_follow_to_other_user(self):
+        """Авторизованный пользователь может подписываться на других
+        пользователей и удалять их из подписок"""
+        Follow.objects.all().delete()
+        self.authorized_client.get(self.FOLLOW_URL)
+        follow = Follow.objects.all()[0]
+        self.assertEqual(follow.user, self.user)
+        self.assertEqual(follow.author, self.user2)
+        self.authorized_client.get(self.UNFOLLOW_URL)
+        self.assertNotIn(follow, Follow.objects.all())
+
+    def test_new_post_appears_on_page_who_follow_user(self):
+        """Новая запись пользователя появляется в ленте тех, кто на него
+        подписан и не появляется в ленте тех, кто не подписан на него"""
+        new_post = Post.objects.create(
+            author=self.user2,
+            text='Текст',
+        )
+        self.authorized_client.get(self.FOLLOW_URL)
+        response = self.authorized_client.get(self.FOLLOW_INDEX_URL)
+        self.assertEqual(len(response.context['page']), 1)
+        self.assertIn(new_post, response.context['page'])
+        response2 = self.authorized_client2.get(self.FOLLOW_INDEX_URL)
+        self.assertNotIn(new_post, response2.context['page'])
