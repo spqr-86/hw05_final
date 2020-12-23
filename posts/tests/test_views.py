@@ -1,10 +1,9 @@
 import shutil
-import tempfile
 
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client
 from django.urls import reverse
-from django.core.files.uploadedfile import SimpleUploadedFile
 
 from posts.models import Post, Group, User, Follow
 
@@ -18,6 +17,9 @@ SLUG2 = 'test-slug2'
 GROUP_URL = reverse('group', kwargs={'slug': SLUG})
 GROUP2_URL = reverse('group', kwargs={'slug': SLUG2})
 PROFILE_URL = reverse('profile', kwargs={'username': NAME})
+FOLLOW_URL = reverse('profile_follow', kwargs={'username': NAME2})
+UNFOLLOW_URL = reverse('profile_unfollow', kwargs={'username': NAME2})
+FOLLOW_INDEX_URL = reverse('follow_index')
 
 
 class PostPagesTests(TestCase):
@@ -52,6 +54,10 @@ class PostPagesTests(TestCase):
             group=cls.group,
             image=uploaded,
         )
+        cls.POST_URL = reverse('post', kwargs={
+            'username': cls.post.author.username,
+            'post_id': cls.post.id
+        })
 
     @classmethod
     def tearDownClass(cls):
@@ -61,10 +67,6 @@ class PostPagesTests(TestCase):
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
-        self.POST_URL = reverse('post', kwargs={
-            'username': self.post.author.username,
-            'post_id': self.post.id
-        })
 
     def test_index_page_show_correct_context(self):
         """Шаблоны с post сформированы с правильным контекстом."""
@@ -129,35 +131,36 @@ class FollowViewsTest(TestCase):
         self.authorized_client2 = Client()
         self.authorized_client.force_login(self.user)
         self.authorized_client2.force_login(self.user2)
-        self.FOLLOW_URL = reverse(
-            'profile_follow', kwargs={'username': NAME2}
-        )
-        self.UNFOLLOW_URL = reverse(
-            'profile_unfollow', kwargs={'username': NAME2}
-        )
-        self.FOLLOW_INDEX_URL = reverse('follow_index')
-
-    def test_user_follow_to_other_user(self):
-        """Авторизованный пользователь может подписываться на других
-        пользователей и удалять их из подписок"""
-        Follow.objects.all().delete()
-        self.authorized_client.get(self.FOLLOW_URL)
-        follow = Follow.objects.all()[0]
-        self.assertEqual(follow.user, self.user)
-        self.assertEqual(follow.author, self.user2)
-        self.authorized_client.get(self.UNFOLLOW_URL)
-        self.assertNotIn(follow, Follow.objects.all())
-
-    def test_new_post_appears_on_page_who_follow_user(self):
-        """Новая запись пользователя появляется в ленте тех, кто на него
-        подписан и не появляется в ленте тех, кто не подписан на него"""
-        new_post = Post.objects.create(
+        self.new_post = Post.objects.create(
             author=self.user2,
             text='Текст',
         )
-        self.authorized_client.get(self.FOLLOW_URL)
-        response = self.authorized_client.get(self.FOLLOW_INDEX_URL)
+        self.follow = Follow.objects.create(user=self.user, author=self.user2)
+
+    def test_user_follow_to_other_user(self):
+        """Авторизованный пользователь может подписываться на других
+        пользователей"""
+        Follow.objects.all().delete()
+        self.authorized_client.get(FOLLOW_URL)
+        follow = Follow.objects.all()[0]
+        self.assertEqual(follow.user, self.user)
+        self.assertEqual(follow.author, self.user2)
+
+    def test_user_unfollow_to_other_user(self):
+        """Авторизованный пользователь может удалять
+        пользователей из подписок"""
+        self.authorized_client.get(UNFOLLOW_URL)
+        self.assertNotIn(self.follow, Follow.objects.filter(user=self.user))
+
+    def test_new_post_appears_on_page_who_follow_user(self):
+        """Новая запись пользователя появляется в ленте тех,
+         кто на него подписан """
+        response = self.authorized_client.get(FOLLOW_INDEX_URL)
         self.assertEqual(len(response.context['page']), 1)
-        self.assertIn(new_post, response.context['page'])
-        response2 = self.authorized_client2.get(self.FOLLOW_INDEX_URL)
-        self.assertNotIn(new_post, response2.context['page'])
+        self.assertIn(self.new_post, response.context['page'])
+
+    def test_new_post_not_appears_on_page_who_not_follow_user(self):
+        """Новая запись пользователя появляется
+        не появляется в ленте тех, кто не подписан на него"""
+        response = self.authorized_client2.get(FOLLOW_INDEX_URL)
+        self.assertNotIn(self.new_post, response.context['page'])

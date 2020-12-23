@@ -11,6 +11,7 @@ NAME = 'test_user'
 SLUG = 'test-slug'
 GROUP_URL = reverse('group', kwargs={'slug': SLUG})
 PROFILE_URL = reverse('profile', kwargs={'username': NAME})
+LOGIN_URL_NEXT = reverse('login') + f'?next='
 
 
 class StaticURLTests(TestCase):
@@ -45,6 +46,7 @@ class PostURLTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.user = User.objects.create_user(username=NAME)
+        cls.user2 = User.objects.create_user(username='test_user2')
         cls.group = Group.objects.create(
             title='Тестовый заголовок',
             slug=SLUG,
@@ -60,6 +62,8 @@ class PostURLTests(TestCase):
         self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
+        self.authorized_client2 = Client()
+        self.authorized_client2.force_login(self.user2)
         self.POST_URL = reverse('post', args=[
             self.post.author.username,
             self.post.id,
@@ -80,36 +84,34 @@ class PostURLTests(TestCase):
         )
 
     def test_urls_exists_at_desired_location_anonymous(self):
-        """Проверка доступности страниц любому пользователю."""
-        for url in self.urls_anonymous:
+        """Проверка доступности страниц"""
+        for url in (self.urls_anonymous + self.urls_authorized):
             with self.subTest(url):
-                response = self.guest_client.get(url)
+                if url in self.urls_anonymous:
+                    response = self.guest_client.get(url)
+                else:
+                    response = self.authorized_client.get(url)
                 self.assertEqual(response.status_code, 200)
 
-    def test_urls_exists_at_desired_location_authorized(self):
-        """Проверка доступности страниц авторизованному пользователю."""
+    def test_urls_redirect(self):
+        """Проверка перенаправления пользователя"""
         for url in self.urls_authorized:
             with self.subTest(url):
-                response = self.authorized_client.get(url)
-                self.assertEqual(response.status_code, 200, url)
-
-    def test_urls_redirect_anonymous_on_admin_login(self):
-        """Страницы перенаправляют
-        анонимного пользователя на страницу логина."""
-        for url in self.urls_authorized:
-            with self.subTest(url):
-                response = self.guest_client.get(url, follow=True)
+                response_guest_client = self.guest_client.get(url)
+                response_authorized_client = self.authorized_client2.get(
+                    self.POST_EDIT_URL)
                 self.assertRedirects(
-                    response, reverse('login') + f'?next={url}'
+                    response_guest_client, LOGIN_URL_NEXT + url
                 )
+                if url == self.POST_EDIT_URL:
+                    self.assertRedirects(
+                        response_authorized_client, self.POST_URL
+                    )
 
     def test_post_edit_url_redirect_authorized_on_post(self):
         """Страница по адресу /post_edit/ перенаправит авторизованного
         пользователя, не автора, на страницу поста.
         """
-        self.user2 = User.objects.create_user(username='test_user2')
-        self.authorized_client2 = Client()
-        self.authorized_client2.force_login(self.user2)
         response = self.authorized_client2.get(self.POST_EDIT_URL)
         self.assertRedirects(response, self.POST_URL)
 

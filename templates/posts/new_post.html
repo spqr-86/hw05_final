@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load user_filters %}
 {% block title %}
-    {% if post %}Редактировать запись{% else %}Новая запись{% endif %}
+    {% if post %}Редактирование записи{% else %}Создание запись{% endif %}
 {% endblock %}
 {% block header %}
     {% if post %}Редактировать запись{% else %}Добавить запись{% endif %}

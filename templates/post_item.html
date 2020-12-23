@@ -17,7 +17,7 @@
             <p>{{ post.text|linebreaksbr }}</p>
         </p>
         <!-- Если пост относится к какому-нибудь сообществу, то отобразим ссылку на него через # -->
-        {% if post.group and not group_page %}
+        {% if post.group and not hide_group %}
             <a class="card-link muted" href="{% url 'group' post.group.slug %}">
                 <strong class="d-block text-gray-dark">
                     #{{ post.group.title }}
@@ -32,7 +32,7 @@
         <!-- Отображение ссылки на комментарии -->
         <div class="d-flex justify-content-between align-items-center">
             <div class="btn-group">
-                {% if not post_page %}
+                {% if not hide_add_comment %}
                     <a class="btn btn-sm btn-primary"
                         href="{% url 'post' post.author.username post.id %}"
                         role="button">

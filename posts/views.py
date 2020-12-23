@@ -1,14 +1,12 @@
-from django.views.generic import CreateView
-from django.shortcuts import render, get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.core.paginator import Paginator
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
-from django.core.exceptions import ObjectDoesNotExist
-from django.views.decorators.cache import cache_page
+from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse_lazy
+from django.views.generic import CreateView
 
-from .models import Post, Group, User, Follow
 from .forms import PostForm, CommentForm
+from .models import Post, Group, User, Follow
 
 
 def index(request):
@@ -57,8 +55,8 @@ def profile(request, username):
         'paginator': paginator,
     }
     if (request.user.is_authenticated and
-            Follow.objects.filter(author=author, user=request.user).exists()):
-        context['following'] = True
+        author.following.filter(user=request.user).exists()):
+            context['following'] = True
     return render(request, 'profile.html', context)
 
 
@@ -126,9 +124,9 @@ def follow_index(request):
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
     if author != request.user and not Follow.objects.filter(
-            user=request.user,
-            author=author,
-    ).exists():
+             user=request.user,
+             author=author
+            ).exists():
         Follow.objects.create(
             user=request.user,
             author=author,

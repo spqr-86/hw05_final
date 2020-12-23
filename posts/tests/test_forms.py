@@ -1,18 +1,19 @@
 import shutil
 import tempfile
 
+from django import forms
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
-from django import forms
 
 from posts.forms import PostForm
 from posts.models import Post, Group, User, Comment
 
 INDEX_URL = reverse('index')
 NEW_POST_URL = reverse('new_post')
+LOGIN_URL_NEXT_NEW_POST = (reverse('login') + f'?next={NEW_POST_URL}')
 
 
 class PostCreateFormTests(TestCase):
@@ -71,9 +72,6 @@ class PostCreateFormTests(TestCase):
         ])
         self.LOGIN_URL_NEXT_POST_EDIT = (
             reverse('login') + f'?next={self.POST_EDIT_URL}'
-        )
-        self.LOGIN_URL_NEXT_NEW_POST = (
-            reverse('login') + f'?next={NEW_POST_URL}'
         )
         self.ADD_COMMENT_URL = reverse('add_comment', args=[
             self.user.username,
@@ -139,7 +137,7 @@ class PostCreateFormTests(TestCase):
             follow=True
         )
         self.assertRedirects(
-            response, self.LOGIN_URL_NEXT_NEW_POST
+            response, LOGIN_URL_NEXT_NEW_POST
         )
         self.assertEqual(Post.objects.count(), post_count)
 
@@ -158,10 +156,7 @@ class PostCreateFormTests(TestCase):
             response, self.LOGIN_URL_NEXT_POST_EDIT
         )
         edit_post = Post.objects.get(id=self.post.id)
-        for field in Post._meta.get_fields(include_parents=False):
-            self.assertEqual(
-                getattr(self.post, field.name), getattr(edit_post, field.name)
-            )
+        self.assertEqual(self.post, edit_post)
 
     def test_new_post_show_correct_context(self):
         """Шаблон new_post сформирован с правильным контекстом."""
@@ -195,7 +190,6 @@ class PostCreateFormTests(TestCase):
         Comment.objects.all().delete()
         comment_count = Comment.objects.count()
         form_data = {
-            'post': self.post,
             'text': 'Тестовый комментарий',
         }
         response = new_authorized_client.post(
@@ -203,17 +197,18 @@ class PostCreateFormTests(TestCase):
             data=form_data,
             follow=True,
         )
-        comment = self.post.comments.all()[0]
+        self.assertEqual(len(response.context['post'].comments.all()), 1)
+        comment = response.context['post'].comments.all()[0]
         self.assertRedirects(response, self.POST_URL)
         self.assertEqual(Comment.objects.count(), comment_count + 1)
         self.assertEqual(comment.text, form_data['text'])
-        self.assertEqual(comment.post, form_data['post'])
+        self.assertEqual(comment.post, self.post)
+        self.assertEqual(comment.author, new_user)
 
-    def test_anonymous_add_post(self):
+    def test_anonymous_add_comment(self):
         """Анонимный пользавотель не может комментировать пост"""
         comment_count = Comment.objects.count()
         form_data = {
-            'post': self.post,
             'text': 'Тестовый комментарий',
         }
         response = self.guest_client.post(
@@ -229,10 +224,10 @@ class PostCreateFormTests(TestCase):
     def test_index_cache(self):
         """проверка работы кэша """
         response = self.authorized_client.get(INDEX_URL)
-        post = response.context['page'][0]
+        content = response.content
         response = self.authorized_client.get(INDEX_URL)
         Post.objects.all().delete()
-        self.assertIn(post, response.context['page'])
+        self.assertEqual(content, response.content)
         cache.clear()
         response = self.authorized_client.get(INDEX_URL)
-        self.assertNotIn(post, response.context['page'])
+        self.assertNotEqual(content, response.content)
