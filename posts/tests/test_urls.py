@@ -108,13 +108,6 @@ class PostURLTests(TestCase):
                         response_authorized_client, self.POST_URL
                     )
 
-    def test_post_edit_url_redirect_authorized_on_post(self):
-        """Страница по адресу /post_edit/ перенаправит авторизованного
-        пользователя, не автора, на страницу поста.
-        """
-        response = self.authorized_client2.get(self.POST_EDIT_URL)
-        self.assertRedirects(response, self.POST_URL)
-
     def test_urls_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
         templates_url_names = {

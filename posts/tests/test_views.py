@@ -160,7 +160,7 @@ class FollowViewsTest(TestCase):
         self.assertIn(self.new_post, response.context['page'])
 
     def test_new_post_not_appears_on_page_who_not_follow_user(self):
-        """Новая запись пользователя появляется
-        не появляется в ленте тех, кто не подписан на него"""
+        """Новая запись пользователя не появляется
+        в ленте тех, кто не подписан на него"""
         response = self.authorized_client2.get(FOLLOW_INDEX_URL)
         self.assertNotIn(self.new_post, response.context['page'])
