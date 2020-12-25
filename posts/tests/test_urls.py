@@ -15,7 +15,7 @@ GROUP_URL = reverse('group', kwargs={'slug': SLUG})
 PROFILE_URL = reverse('profile', kwargs={'username': NAME})
 LOGIN_URL_NEXT = reverse('login') + f'?next='
 FOLLOW_URL = reverse('follow_index')
-NOT_EXISTING_PAGE = 'not-exist/'
+NOT_EXISTING_URL = 'not-exist/'
 
 
 class StaticURLTests(TestCase):
@@ -61,10 +61,6 @@ class PostURLTests(TestCase):
             author=cls.user,
             group=cls.group,
         )
-        cls.new_post = Post.objects.create(
-            author=cls.user_2,
-            text='Текст',
-        )
 
     def setUp(self):
         self.guest_client = Client()
@@ -81,96 +77,62 @@ class PostURLTests(TestCase):
             self.post.author.username,
             self.post.id,
         ])
+        self.URLS_RESPONSE = [
+            (INDEX_URL, 200, self.guest_client),
+            (GROUP_URL, 200, self.guest_client),
+            (PROFILE_URL, 200, self.guest_client),
+            (PROFILE_URL, 200, self.authorized_client_2),
+            (self.POST_URL, 200, self.guest_client),
+            (NEW_POST_URL, 200, self.authorized_client),
+            (NEW_POST_URL, 302, self.guest_client),
+            (self.POST_EDIT_URL, 200, self.authorized_client),
+            (self.POST_EDIT_URL, 302, self.authorized_client_2),
+            (self.POST_EDIT_URL, 302, self.guest_client),
+            (FOLLOW_URL, 200, self.authorized_client),
+            (NOT_EXISTING_URL, 404, self.guest_client)
+        ]
+        self.URLS_REDIRECT = [
+            (NEW_POST_URL, LOGIN_URL_NEXT + NEW_POST_URL, self.guest_client),
+            (FOLLOW_URL, LOGIN_URL_NEXT + FOLLOW_URL, self.guest_client),
+            (self.POST_EDIT_URL, LOGIN_URL_NEXT +
+             self.POST_EDIT_URL, self.guest_client),
+            (self.POST_EDIT_URL, self.POST_URL, self.authorized_client_2),
+        ]
 
-        self.URLS = {
-            INDEX_URL: {
-                'availability_for_anonymous': True,
-                'template_name': 'index.html',
-            },
-            GROUP_URL: {
-                'availability_for_anonymous': True,
-                'template_name': 'group.html',
-            },
-            PROFILE_URL: {
-                'availability_for_anonymous': True,
-                'template_name': 'profile.html',
-            },
-            self.POST_URL: {
-                'availability_for_anonymous': True,
-                'template_name': 'posts/post.html',
-            },
-            NEW_POST_URL: {
-                'availability_for_anonymous': False,
-                'template_name': 'posts/new_post.html'
-            },
-            self.POST_EDIT_URL: {
-                'availability_for_anonymous': False,
-                'redirect': self.POST_URL,
-                'template_name': 'posts/new_post.html',
-            },
-            FOLLOW_URL: {
-                'availability_for_anonymous': False,
-                'template_name': 'follow.html',
-            },
-            NOT_EXISTING_PAGE: {
-                'availability_for_anonymous': True,
-                '404': True,
-                'template_name': 'misc/404.html',
-            },
-        }
-
-    def test_urls_exists_at_desired_location_anonymous(self):
+    def test_urls_response(self):
         """Проверка ответа страниц"""
-        for url, data in self.URLS.items():
-            with self.subTest(url):
-                response_for_guest_client = self.guest_client.get(url)
-                response_for_authorized_client = self.authorized_client.get(url)
-                if data['availability_for_anonymous'] is False:
-                    self.assertEqual(
-                        response_for_guest_client.status_code, 302)
-                    self.assertEqual(
-                        response_for_authorized_client.status_code, 200)
-                    if 'redirect' in data:
-                        response = self.authorized_client_2.get(url)
-                        self.assertEqual(response.status_code, 302)
-                else:
-                    if '404' not in data:
-                        self.assertEqual(
-                            response_for_guest_client.status_code, 200)
-                        self.assertEqual(
-                            response_for_authorized_client.status_code, 200)
-                    else:
-                        self.assertEqual(
-                            response_for_guest_client.status_code, 404)
+        for item in self.URLS_RESPONSE:
+            with self.subTest(item):
+                url = item[0]
+                code = item[1]
+                client = item[2]
+                response = client.get(url)
+                self.assertEqual(response.status_code, code)
 
     def test_urls_redirect(self):
         """Проверка перенаправления пользователя"""
-        for url, data in self.URLS.items():
-            with self.subTest(url):
-                if data['availability_for_anonymous'] is False:
-                    response = self.guest_client.get(url)
-                    self.assertRedirects(response, LOGIN_URL_NEXT + url)
-                else:
-                    if 'redirect' in data:
-                        response = self.authorized_client_2.get(url)
-                        self.assertRedirects(response, data['redirect'])
+        for item in self.URLS_REDIRECT:
+            with self.subTest(item):
+                url = item[0]
+                redirect = item[1]
+                client = item[2]
+                response = client.get(url)
+                self.assertRedirects(response, redirect)
 
     def test_urls_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
-        for url, data in self.URLS.items():
-            with self.subTest():
+        templates_url_names = {
+            INDEX_URL: 'index.html',
+            GROUP_URL: 'group.html',
+            PROFILE_URL: 'profile.html',
+            self.POST_URL: 'posts/post.html',
+            NEW_POST_URL: 'posts/new_post.html',
+            self.POST_EDIT_URL: 'posts/new_post.html',
+            FOLLOW_URL: 'follow.html',
+            NOT_EXISTING_URL: 'misc/404.html',
+        }
+        for url in templates_url_names:
+            with self.subTest(url):
                 response = self.authorized_client.get(url)
-                self.assertTemplateUsed(response, data['template_name'])
-
-    def test_new_post_appears_on_page_who_follow_user(self):
-        """Новая запись пользователя появляется в ленте тех,
-         кто на него подписан """
-        response = self.authorized_client.get(FOLLOW_INDEX_URL)
-        self.assertEqual(len(response.context['page']), 1)
-        self.assertIn(self.new_post, response.context['page'])
-
-    def test_new_post_not_appears_on_page_who_not_follow_user(self):
-        """Новая запись пользователя не появляется
-        в ленте тех, кто не подписан на него"""
-        response = self.authorized_client_2.get(FOLLOW_INDEX_URL)
-        self.assertNotIn(self.new_post, response.context['page'])
+                self.assertTemplateUsed(
+                    response, templates_url_names[url])

@@ -69,20 +69,26 @@ class PostPagesTests(TestCase):
 
     def setUp(self):
         self.authorized_client = Client()
+        self.authorized_client_2 = Client()
+        self.authorized_client.force_login(self.user)
+        self.authorized_client_2.force_login(self.user_2)
         self.URL_NAMES = {
-            INDEX_URL: self.user,
-            GROUP_1_URL: self.user,
-            PROFILE_1_URL: self.user,
-            self.POST_1_URL: self.user,
-            FOLLOW_INDEX_URL: self.user_2,
+            INDEX_URL: self.authorized_client,
+            GROUP_1_URL: self.authorized_client,
+            PROFILE_1_URL: self.authorized_client,
+            self.POST_1_URL: self.authorized_client,
+            FOLLOW_INDEX_URL: self.authorized_client_2,
         }
+        self.URL_CONTEXT = [
+            (PROFILE_1_URL, self.user, 'author'),
+            (GROUP_1_URL, self.group, 'group'),
+        ]
 
-    def test_index_page_show_correct_context(self):
+    def test_templates_with_post_show_correct_context(self):
         """Шаблоны с post сформированы с правильным контекстом."""
-        for url, user in self.URL_NAMES.items():
+        for url, client in self.URL_NAMES.items():
             with self.subTest(url):
-                self.client.force_login(user)
-                response = self.client.get(url)
+                response = client.get(url)
                 if 'post' in response.context:
                     post = response.context['post']
                 else:
@@ -90,10 +96,14 @@ class PostPagesTests(TestCase):
                     post = response.context.get('page')[0]
                 self.assertEqual(post, self.post)
 
-    def test_group_pages_show_correct_context(self):
-        """Шаблон group сформирован с правильным контекстом."""
-        response = self.authorized_client.get(GROUP_1_URL)
-        self.assertEqual(response.context['group'], self.group)
+    def test_pages_show_correct_context(self):
+        """Шаблон group, profile сформирован с правильным контекстом."""
+        for item in self.URL_CONTEXT:
+            url = item[0]
+            result = item[1]
+            context = item[2]
+            response = self.authorized_client.get(url)
+            self.assertEqual(response.context[context], result)
 
     def test_post_with_group_not_appears_on_page(self):
         """Пост с группой не попал в группу, для которой
@@ -128,27 +138,36 @@ class FollowViewsTest(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.user = User.objects.create_user(username=NAME_1)
-        cls.user2 = User.objects.create_user(username=NAME_2)
+        cls.user_2 = User.objects.create_user(username=NAME_2)
 
     def setUp(self):
         self.authorized_client = Client()
-        self.authorized_client_2 = Client()
         self.authorized_client.force_login(self.user)
-        self.authorized_client_2.force_login(self.user2)
-        self.follow = Follow.objects.create(user=self.user, author=self.user2)
+        self.follow = Follow.objects.create(user=self.user, author=self.user_2)
+        self.new_post = Post.objects.create(
+            author=self.user_2,
+            text='Текст',
+        )
 
     def test_user_follow_to_other_user(self):
         """Авторизованный пользователь может подписываться на других
         пользователей"""
         Follow.objects.all().delete()
         self.authorized_client.get(FOLLOW_2_URL)
-        follow = Follow.objects.all()[0]
-        self.assertEqual(follow.user, self.user)
-        self.assertEqual(follow.author, self.user2)
+        self.assertEqual(Follow.objects.filter(
+            user=self.user, author=self.user_2).exists(), True)
 
     def test_user_unfollow_to_other_user(self):
         """Авторизованный пользователь может удалять
         пользователей из подписок"""
         self.authorized_client.get(UNFOLLOW_2_URL)
         self.assertEqual(
-            Follow.objects.filter(user=self.user).exists(), False)
+            Follow.objects.filter(
+                user=self.user, author=self.user_2).exists(), False)
+
+    def test_new_post_not_appears_on_page_who_not_follow_user(self):
+        """Новая запись пользователя не появляется
+        в ленте тех, кто не подписан на него"""
+        self.authorized_client.force_login(self.user_2)
+        response = self.authorized_client.get(FOLLOW_INDEX_URL)
+        self.assertNotIn(self.new_post, response.context['page'])
