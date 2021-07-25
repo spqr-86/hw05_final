@@ -16,9 +16,6 @@ __pycache__/
 *.sublime-project
 *.sublime-workspace
 
-static/
-posts/static/
-media/
 data/
 sent_emails/
 

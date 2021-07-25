@@ -56,7 +56,7 @@ def profile(request, username):
     }
     if (request.user.is_authenticated and author != request.user and
         author.following.filter(user=request.user).exists()):
-            context['following'] = True
+        context['following'] = True
     return render(request, 'profile.html', context)
 
 

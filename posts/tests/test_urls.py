@@ -77,7 +77,7 @@ class PostURLTests(TestCase):
             self.post.author.username,
             self.post.id,
         ])
-        self.URLS_RESPONSE = [
+        self.URLS_AND_RESPONSES = [
             (INDEX_URL, 200, self.guest_client),
             (GROUP_URL, 200, self.guest_client),
             (PROFILE_URL, 200, self.guest_client),
@@ -101,21 +101,15 @@ class PostURLTests(TestCase):
 
     def test_urls_response(self):
         """Проверка ответа страниц"""
-        for item in self.URLS_RESPONSE:
-            with self.subTest(item):
-                url = item[0]
-                code = item[1]
-                client = item[2]
+        for url, code, client in self.URLS_AND_RESPONSES:
+            with self.subTest(url):
                 response = client.get(url)
                 self.assertEqual(response.status_code, code)
 
     def test_urls_redirect(self):
         """Проверка перенаправления пользователя"""
-        for item in self.URLS_REDIRECT:
-            with self.subTest(item):
-                url = item[0]
-                redirect = item[1]
-                client = item[2]
+        for url, redirect, client in self.URLS_REDIRECT:
+            with self.subTest(url):
                 response = client.get(url)
                 self.assertRedirects(response, redirect)
 

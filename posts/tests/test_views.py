@@ -82,10 +82,11 @@ class PostPagesTests(TestCase):
         self.URL_CONTEXT = [
             (PROFILE_1_URL, self.user, 'author'),
             (GROUP_1_URL, self.group, 'group'),
+            (self.POST_1_URL, self.user, 'author'),
         ]
 
     def test_templates_with_post_show_correct_context(self):
-        """Шаблоны с post сформированы с правильным контекстом."""
+        """Страницы с post сформированы с правильным контекстом."""
         for url, client in self.URL_NAMES.items():
             with self.subTest(url):
                 response = client.get(url)
@@ -97,11 +98,8 @@ class PostPagesTests(TestCase):
                 self.assertEqual(post, self.post)
 
     def test_pages_show_correct_context(self):
-        """Шаблон group, profile сформирован с правильным контекстом."""
-        for item in self.URL_CONTEXT:
-            url = item[0]
-            result = item[1]
-            context = item[2]
+        """Страницы сформирован с правильным контекстом."""
+        for url, result, context in self.URL_CONTEXT:
             response = self.authorized_client.get(url)
             self.assertEqual(response.context[context], result)
 
