@@ -8,10 +8,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "localhost",
-    "127.0.0.1",
-    "[::1]",
-    "testserver",
-    "debug_toolbar",
+    "18.224.27.202",
 ]
 
 INSTALLED_APPS = [
@@ -101,11 +98,11 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static', )
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/', )
 
 MEDIA_URL = '/media/'
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
 LOGIN_URL = '/auth/login/'
 
