@@ -1,9 +1,8 @@
 from django.contrib.flatpages.models import FlatPage
 from django.contrib.sites.models import Site
-from django.test import TestCase, Client
+from django.test import Client, TestCase
 from django.urls import reverse
-
-from posts.models import Group, User, Post, Follow
+from posts.models import Follow, Group, Post, User
 
 INDEX_URL = reverse('index')
 FOLLOW_INDEX_URL = reverse('follow_index')

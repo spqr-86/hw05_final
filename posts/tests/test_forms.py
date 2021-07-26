@@ -3,13 +3,12 @@ import tempfile
 
 from django import forms
 from django.conf import settings
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.cache import cache
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
-
 from posts.forms import PostForm
-from posts.models import Post, Group, User, Comment
+from posts.models import Comment, Group, Post, User
 
 INDEX_URL = reverse('index')
 NEW_POST_URL = reverse('new_post')
