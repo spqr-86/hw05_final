@@ -42,35 +42,35 @@ jobs:
           with:
             push: true
             tags: ${{ secrets.DOCKER_USERNAME }}/foodgram:latest
-  deploy:
-      name: Deploy
-      runs-on: ubuntu-latest
-      environment: production
-      needs: build_and_push_to_docker_hub
-
-      steps:
-      - name: executing remote ssh commands to deploy
-        uses: appleboy/ssh-action@master
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
-
-          stack_file_name: docker-compose.yaml
-          script: |
-            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/yatube:latest
-            sudo docker-compose stop
-            sudo docker-compose rm -f web
-            touch .env
-            echo DB_ENGINE=${{ secrets.DB_ENGINE }} >> .env
-            echo DB_NAME=${{ secrets.DB_NAME }} >> .env
-            echo POSTGRES_USER=${{ secrets.POSTGRES_USER }} >> .env
-            echo POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} >> .env
-            echo DB_HOST=${{ secrets.DB_HOST }} >> .env
-            echo DB_PORT=${{ secrets.DB_PORT }} >> .env
-            echo SECRET_KEY=${{ secrets.SECRET_KEY }} >> .env
-            echo EMAIL_HOST=${{ secrets.EMAIL_HOST }} >> .env
-            echo EMAIL_PORT=${{ secrets.EMAIL_PORT }} >> .env
-            echo EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }} >> .env
-            echo EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }} >> .env
-            sudo docker-compose up -d
+#  deploy:
+#      name: Deploy
+#      runs-on: ubuntu-latest
+#      environment: production
+#      needs: build_and_push_to_docker_hub
+#
+#      steps:
+#      - name: executing remote ssh commands to deploy
+#        uses: appleboy/ssh-action@master
+#        with:
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-region: us-east-2
+#
+#          stack_file_name: docker-compose.yaml
+#          script: |
+#            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/yatube:latest
+#            sudo docker-compose stop
+#            sudo docker-compose rm -f web
+#            touch .env
+#            echo DB_ENGINE=${{ secrets.DB_ENGINE }} >> .env
+#            echo DB_NAME=${{ secrets.DB_NAME }} >> .env
+#            echo POSTGRES_USER=${{ secrets.POSTGRES_USER }} >> .env
+#            echo POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} >> .env
+#            echo DB_HOST=${{ secrets.DB_HOST }} >> .env
+#            echo DB_PORT=${{ secrets.DB_PORT }} >> .env
+#            echo SECRET_KEY=${{ secrets.SECRET_KEY }} >> .env
+#            echo EMAIL_HOST=${{ secrets.EMAIL_HOST }} >> .env
+#            echo EMAIL_PORT=${{ secrets.EMAIL_PORT }} >> .env
+#            echo EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }} >> .env
+#            echo EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }} >> .env
+#            sudo docker-compose up -d
