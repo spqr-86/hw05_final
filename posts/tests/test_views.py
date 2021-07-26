@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
+
 from posts.models import Follow, Group, Post, User
 
 INDEX_URL = reverse('index')

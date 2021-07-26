@@ -2,6 +2,7 @@ from django.contrib.flatpages.models import FlatPage
 from django.contrib.sites.models import Site
 from django.test import Client, TestCase
 from django.urls import reverse
+
 from posts.models import Follow, Group, Post, User
 
 INDEX_URL = reverse('index')
@@ -93,8 +94,8 @@ class PostURLTests(TestCase):
         self.URLS_REDIRECT = [
             (NEW_POST_URL, LOGIN_URL_NEXT + NEW_POST_URL, self.guest_client),
             (FOLLOW_URL, LOGIN_URL_NEXT + FOLLOW_URL, self.guest_client),
-            (self.POST_EDIT_URL, LOGIN_URL_NEXT +
-             self.POST_EDIT_URL, self.guest_client),
+            (self.POST_EDIT_URL, LOGIN_URL_NEXT
+             + self.POST_EDIT_URL, self.guest_client),
             (self.POST_EDIT_URL, self.POST_URL, self.authorized_client_2),
         ]
 
