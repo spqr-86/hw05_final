@@ -13,7 +13,7 @@ NAME_2 = 'user-2'
 SLUG = 'test-slug'
 GROUP_URL = reverse('group', kwargs={'slug': SLUG})
 PROFILE_URL = reverse('profile', kwargs={'username': NAME})
-LOGIN_URL_NEXT = reverse('login') + f'?next='
+LOGIN_URL_NEXT = reverse('login') + '?next='
 FOLLOW_URL = reverse('follow_index')
 NOT_EXISTING_URL = 'not-exist/'
 

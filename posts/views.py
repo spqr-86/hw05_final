@@ -55,8 +55,8 @@ def profile(request, username):
         'paginator': paginator,
     }
     if (request.user.is_authenticated
-        and author != request.user
-        and author.following.filter(user=request.user).exists()):
+            and author != request.user
+            and author.following.filter(user=request.user).exists()):
         context['following'] = True
     return render(request, 'profile.html', context)
 
