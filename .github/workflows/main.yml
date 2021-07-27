@@ -42,28 +42,4 @@ jobs:
           with:
             push: true
             tags: ${{ secrets.DOCKER_USERNAME }}/foodgram:latest
-  deploy:
-      name: Deploy
-      runs-on: ubuntu-latest
-      environment: production
-      needs: build_and_push_to_docker_hub
 
-      steps:
-#      - name: executing remote ssh commands to deploy
-#        uses: aws-actions/configure-aws-credentials@v1
-#        with:
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          aws-region: us-east-2
-      - name: executing remote ssh commands to deploy
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USER }}
-          key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}
-          stack_file_name: docker-compose.yaml
-          script: |
-            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram:latest
-            sudo docker stop $(sudo docker ps -a -q)
-            sudo docker run --rm -d -p 5000:5000 ${{ secrets.DOCKER_USERNAME }}/foodgram:latest
