@@ -8,6 +8,8 @@
 #  Сайт
 http://18.224.27.202
 
+user: user
+password: passworduser
 
 # Технологии
 * Python
